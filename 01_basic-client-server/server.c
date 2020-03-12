@@ -202,6 +202,7 @@ int on_connect_request(struct rdma_cm_id *id)
   struct rdma_conn_param cm_params;
   struct connection *conn;
 
+
   printf("received connection request.\n");
 
   build_context(id->verbs);
@@ -216,6 +217,8 @@ int on_connect_request(struct rdma_cm_id *id)
   post_receives(conn);
 
   memset(&cm_params, 0, sizeof(cm_params));
+  cm_params.private_data_len = 2;
+
   TEST_NZ(rdma_accept(id, &cm_params));
 
   return 0;
@@ -274,8 +277,14 @@ int on_event(struct rdma_cm_event *event)
 
   if (event->event == RDMA_CM_EVENT_CONNECT_REQUEST)
     r = on_connect_request(event->id);
-  else if (event->event == RDMA_CM_EVENT_ESTABLISHED)
+  else if (event->event == RDMA_CM_EVENT_ESTABLISHED) {
+	  printf("private_data_len: %d\n", event->param.conn.private_data_len);
+	  if(event->param.conn.private_data) {
+		  printf("data: %d\n", *(char*)event->param.conn.private_data);
+
     r = on_connection(event->id->context);
+	  }
+  }
   else if (event->event == RDMA_CM_EVENT_DISCONNECTED)
     r = on_disconnect(event->id);
   else

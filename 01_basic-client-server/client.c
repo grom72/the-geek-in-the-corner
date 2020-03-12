@@ -33,6 +33,11 @@ struct connection {
   int num_completions;
 };
 
+struct pdat_t {
+	char t;
+	char s;
+};
+static struct pdat_t pdat;
 static void die(const char *reason);
 
 static void build_context(struct ibv_context *verbs);
@@ -277,7 +282,13 @@ int on_event(struct rdma_cm_event *event)
   else if (event->event == RDMA_CM_EVENT_ROUTE_RESOLVED)
     r = on_route_resolved(event->id);
   else if (event->event == RDMA_CM_EVENT_ESTABLISHED)
+  {
+	  printf("private_data_len: %d\n", event->param.conn.private_data_len);
+	  if(event->param.conn.private_data) {
+		  printf("data: %d\n", *(char*)event->param.conn.private_data);
+	  }
     r = on_connection(event->id->context);
+  }
   else if (event->event == RDMA_CM_EVENT_DISCONNECTED)
     r = on_disconnect(event->id);
   else
@@ -286,6 +297,8 @@ int on_event(struct rdma_cm_event *event)
   return r;
 }
 
+
+
 int on_route_resolved(struct rdma_cm_id *id)
 {
   struct rdma_conn_param cm_params;
@@ -293,6 +306,8 @@ int on_route_resolved(struct rdma_cm_id *id)
   printf("route resolved.\n");
 
   memset(&cm_params, 0, sizeof(cm_params));
+  cm_params.private_data = &pdat;
+  cm_params.private_data_len = sizeof(pdat);
   TEST_NZ(rdma_connect(id, &cm_params));
 
   return 0;
